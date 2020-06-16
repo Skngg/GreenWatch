@@ -1,0 +1,12 @@
+﻿{
+  "SchemaVersion": 1,
+  "Name": "GreenWatch_HighLevelCore",
+  "ComponentId": "67ef8d2b-3085-4a34-9f5c-61a34718a329",
+  "EntryPoint": "/bin/app",
+  "CmdArgs": [],
+  "Capabilities": {
+    "Gpio": [],
+    "AllowedApplicationConnections": [ "87db8119-b2bf-4292-8260-46551600fd69" ]
+  },
+  "ApplicationType": "Default"
+}

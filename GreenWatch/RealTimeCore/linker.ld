@@ -1,0 +1,1 @@
+INCLUDE lib/linker.ld
