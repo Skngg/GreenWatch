@@ -1,59 +1,94 @@
-/* Copyright (c) Codethink Ltd. All rights reserved.
-   Licensed under the MIT License. */
-
-#ifndef LSM6DS3_H_
-#define LSM6DS3_H_
+#ifndef LSM6DSO_H_
+#define LSM6DSO_H_
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <math.h>
 #include "../lib/I2CMaster.h"
 
-   // Variable names and comments come from the LSM6DS3 datasheet, which can be found here:
-   // https://www.st.com/resource/en/datasheet/lsm6ds3.pdf
+   // Variable names and comments come from the LSM6DSO datasheet, which can be found here:
+   // https://www.st.com/resource/en/datasheet/LSM6DSO.pdf
 
-   /// <summary>This enum contains a set of registers that are used to control the behaviour of the LSM6DS3 device.</summary>
+/// <summary>This enum contains a set of registers that are used to control the behaviour of the LSM6DSO device.</summary>
 typedef enum {
-    LSM6DS3_REG_FUNC_CFG_ACCESS = 0x01,
-    LSM6DS3_REG_SENSOR_SYNC_TIME_FRAME = 0x04,
-    LSM6DS3_REG_FIFO_CTRL1 = 0x06,
-    LSM6DS3_REG_FIFO_CTRL2 = 0x07,
-    LSM6DS3_REG_FIFO_CTRL3 = 0x08,
-    LSM6DS3_REG_FIFO_CTRL4 = 0x09,
-    LSM6DS3_REG_FIFO_CTRL5 = 0x0A,
-    LSM6DS3_REG_ORIENT_CFG_G = 0x0B,
-    LSM6DS3_REG_INT1_CTRL = 0x0D,
-    LSM6DS3_REG_INT2_CTRL = 0x0E,
-    LSM6DS3_REG_WHO_AM_I = 0x0F,
-    LSM6DS3_REG_CTRL1_XL = 0x10,
-    LSM6DS3_REG_CTRL2_G = 0x11,
-    LSM6DS3_REG_CTRL3_C = 0x12,
-    LSM6DS3_REG_CTRL4_C = 0x13,
-    LSM6DS3_REG_CTRL5_C = 0x14,
-    LSM6DS3_REG_CTRL6_C = 0x15,
-    LSM6DS3_REG_CTRL7_G = 0x16,
-    LSM6DS3_REG_CTRL8_XL = 0x17,
-    LSM6DS3_REG_CTRL9_XL = 0x18,
-    LSM6DS3_REG_CTRL10_C = 0x19,
-    LSM6DS3_REG_MASTER_CONFIG = 0x1A,
-    LSM6DS3_REG_WAKE_UP_SRC = 0x1B,
-    LSM6DS3_REG_TAP_SRC = 0x1C,
-    LSM6DS3_REG_D6D_SRC = 0x1D,
-    LSM6DS3_REG_STATUS_REG = 0x1E,
-    LSM6DS3_REG_OUT_TEMP_L = 0x20,
-    LSM6DS3_REG_OUT_TEMP_H = 0x21,
-    LSM6DS3_REG_OUTX_L_G = 0x22,
-    LSM6DS3_REG_OUTX_H_G = 0x23,
-    LSM6DS3_REG_OUTY_L_G = 0x24,
-    LSM6DS3_REG_OUTY_H_G = 0x25,
-    LSM6DS3_REG_OUTZ_L_G = 0x26,
-    LSM6DS3_REG_OUTZ_H_G = 0x27,
-    LSM6DS3_REG_OUTX_L_XL = 0x28,
-    LSM6DS3_REG_OUTX_H_XL = 0x29,
-    LSM6DS3_REG_OUTY_L_XL = 0x2A,
-    LSM6DS3_REG_OUTY_H_XL = 0x2B,
-    LSM6DS3_REG_OUTZ_L_XL = 0x2C,
-    LSM6DS3_REG_OUTZ_H_XL = 0x2D,
-} LSM6DS3_reg_e;
+    LSM6DSO_REG_FUNC_CFG_ACCESS = 0x01,
+    LSM6DSO_REG_PIN_CTRL = 0x02,
+    LSM6DSO_REG_FIFO_CTRL1 = 0x07,
+    LSM6DSO_REG_FIFO_CTRL2 = 0x08,
+    LSM6DSO_REG_FIFO_CTRL3 = 0x09,
+    LSM6DSO_REG_FIFO_CTRL4 = 0x0A,
+    LSM6DSO_REG_COUNTER_BDR_REG1 = 0x0B,
+    LSM6DSO_REG_COUNTER_BDR_REG2 = 0x0C,
+    LSM6DSO_REG_INT1_CTRL = 0x0D,
+    LSM6DSO_REG_INT2_CTRL = 0x0E,
+    LSM6DSO_REG_WHO_AM_I = 0x0F,
+    LSM6DSO_REG_CTRL1_XL = 0x10,
+    LSM6DSO_REG_CTRL2_G = 0x11,
+    LSM6DSO_REG_CTRL3_C = 0x12,
+    LSM6DSO_REG_CTRL4_C = 0x13,
+    LSM6DSO_REG_CTRL5_C = 0x14,
+    LSM6DSO_REG_CTRL6_C = 0x15,
+    LSM6DSO_REG_CTRL7_G = 0x16,
+    LSM6DSO_REG_CTRL8_XL = 0x17,
+    LSM6DSO_REG_CTRL9_XL = 0x18,
+    LSM6DSO_REG_CTRL10_C = 0x19,
+    LSM6DSO_REG_ALL_INT_SRC = 0x1A,
+    LSM6DSO_REG_WAKE_UP_SRC = 0x1B,
+    LSM6DSO_REG_TAP_SRC = 0x1C,
+    LSM6DSO_REG_D6D_SRC = 0x1D,
+    LSM6DSO_REG_STATUS_REG = 0x1E,
+    LSM6DSO_REG_OUT_TEMP_L = 0x20,
+    LSM6DSO_REG_OUT_TEMP_H = 0x21,
+    LSM6DSO_REG_OUTX_L_G = 0x22,
+    LSM6DSO_REG_OUTX_H_G = 0x23,
+    LSM6DSO_REG_OUTY_L_G = 0x24,
+    LSM6DSO_REG_OUTY_H_G = 0x25,
+    LSM6DSO_REG_OUTZ_L_G = 0x26,
+    LSM6DSO_REG_OUTZ_H_G = 0x27,
+    LSM6DSO_REG_OUTX_L_XL = 0x28,
+    LSM6DSO_REG_OUTX_H_XL = 0x29,
+    LSM6DSO_REG_OUTY_L_XL = 0x2A,
+    LSM6DSO_REG_OUTY_H_XL = 0x2B,
+    LSM6DSO_REG_OUTZ_L_XL = 0x2C,
+    LSM6DSO_REG_OUTZ_H_XL = 0x2D,
+} LSM6DSO_reg_e;
+
+/// <summary>This enum contains a set of registers that are used to control the sensor hub feature of the LSM6DSO device.</summary>
+typedef enum {
+    LSM6DSO_SHUB_REG_SENSOR_HUB_1 = 0x02,
+    LSM6DSO_SHUB_REG_SENSOR_HUB_2 = 0x03,
+    LSM6DSO_SHUB_REG_SENSOR_HUB_3 = 0x04,
+    LSM6DSO_SHUB_REG_SENSOR_HUB_4 = 0x05,
+    LSM6DSO_SHUB_REG_SENSOR_HUB_5 = 0x06,
+    LSM6DSO_SHUB_REG_SENSOR_HUB_6 = 0x07,
+    LSM6DSO_SHUB_REG_SENSOR_HUB_7 = 0x08,
+    LSM6DSO_SHUB_REG_SENSOR_HUB_8 = 0x09,
+    LSM6DSO_SHUB_REG_SENSOR_HUB_9 = 0x0A,
+    LSM6DSO_SHUB_REG_SENSOR_HUB_10 = 0x0B,
+    LSM6DSO_SHUB_REG_SENSOR_HUB_11 = 0x0C,
+    LSM6DSO_SHUB_REG_SENSOR_HUB_12 = 0x0D,
+    LSM6DSO_SHUB_REG_SENSOR_HUB_13 = 0x0E,
+    LSM6DSO_SHUB_REG_SENSOR_HUB_14 = 0x0F,
+    LSM6DSO_SHUB_REG_SENSOR_HUB_15 = 0x10,
+    LSM6DSO_SHUB_REG_SENSOR_HUB_16 = 0x11,
+    LSM6DSO_SHUB_REG_SENSOR_HUB_17 = 0x12,
+    LSM6DSO_SHUB_REG_SENSOR_HUB_18 = 0x13,
+    LSM6DSO_SHUB_REG_MASTER_CONFIG = 0x14,
+    LSM6DSO_SHUB_REG_SLV0_ADD = 0x15,
+    LSM6DSO_SHUB_REG_SLV0_SUBADD = 0x16,
+    LSM6DSO_SHUB_REG_SLAVE0_CONFIG = 0x17,
+    LSM6DSO_SHUB_REG_SLV1_ADD = 0x18,
+    LSM6DSO_SHUB_REG_SLV1_SUBADD = 0x19,
+    LSM6DSO_SHUB_REG_SLAVE1_CONFIG = 0x1A,
+    LSM6DSO_SHUB_REG_SLV2_ADD = 0x1B,
+    LSM6DSO_SHUB_REG_SLV2_SUBADD = 0x1C,
+    LSM6DSO_SHUB_REG_SLAVE2_CONFIG = 0x1D,
+    LSM6DSO_SHUB_REG_SLV3_ADD = 0x1E,
+    LSM6DSO_SHUB_REG_SLV3_SUBADD = 0x1F,
+    LSM6DSO_SHUB_REG_SLAVE3_CONFIG = 0x20,
+    LSM6DSO_SHUB_REG_DATAWRITE_SLV0 = 0x21,
+    LSM6DSO_SHUB_REG_STATUS_MASTER = 0x22,
+} LSM6DSO_shub_reg_e;
 
 /// <summary>Bit field description for register STATUS_REG.</summary>
 typedef union __attribute__((__packed__)) {
@@ -80,29 +115,34 @@ typedef union __attribute__((__packed__)) {
     };
 
     uint8_t mask;
-} LSM6DS3_status_t;
+} LSM6DSO_status_t;
 
 /// <summary>Bit field description for register CTRL1_XL.</summary>
 typedef union __attribute__((__packed__)) {
     struct __attribute__((__packed__)) {
+        unsigned res_0 : 1;
         /// <summary>
-        /// <para>Anti-aliasing filter bandwidth selection. Default value: 00.</para>
-        /// <para>(00: 400 Hz; 01: 200 Hz; 10: 100 Hz; 11: 50 Hz).</para>
+        /// <para>Accelerometer high-resolution selection. Default value: 0.</para>
+        /// <para>false: output from first stage digital filtering</para>
+        /// <para>true: output from LPF2 second filtering.</para>
         /// </summary>
-        unsigned bw_xl : 2;
+        bool lpf2_xl_en : 1;
         /// <summary>
         /// <para>Accelerometer full-scale selection. Default value: 00.</para>
-        /// <para>(00: +/-2 g; 01: +/-16 g; 10: +/-4 g; 11: +/-8 g).</para>
+        /// <para>Depends on the XL_FS_MODE in CTRL8_XL.</para>
         /// </summary>
         unsigned fs_xl : 2;
-        /// <summary>Output data rate and power mode selection. Default value: 0000.</summary>
+        /// <summary>
+        /// <para>Output data rate and power mode selection. Default value: 0000.</para>
+        /// <para>Depends on the XL_HM_MODE in CTRL6_C.</para>
+        /// </summary>
         unsigned odr_xl : 4;
     };
 
     uint8_t mask;
-} LSM6DS3_ctrl1_xl_t;
+} LSM6DSO_ctrl1_xl_t;
 
-/// <summary>Bit field description for register CTRL1_XL.</summary>
+/// <summary>Bit field description for register CTRL2_G.</summary>
 typedef union __attribute__((__packed__)) {
     struct __attribute__((__packed__)) {
         unsigned res_0 : 1;
@@ -114,31 +154,34 @@ typedef union __attribute__((__packed__)) {
         /// <summary>
         /// <para>Gyroscope full-scale selection. Default value: 00</para>
         /// <para>(00: 250 dps; 01: 500 dps; 10: 1000 dps; 11: 2000 dps)</para>
-        ///</summary>
+        /// </summary>
         unsigned fs_g : 2;
-        /// <summary>Gyroscope output data rate selection. Default value: 0000</summary>
+        /// <summary>
+        /// <para>Gyroscope output data rate selection. Default value: 0000</para>
+        /// <para>Depends on the XL_HM_MODE in CTRL6_C.</para>
+        /// </summary>
         unsigned odr_g : 4;
     };
 
     uint8_t mask;
-} LSM6DS3_ctrl2_g_t;
+} LSM6DSO_ctrl2_g_t;
 
-/// <summary>This is  from the WHO_AM_I register. Its value is fixed at 69h.</summary>
-static const uint8_t LSM6DS3_WHO_AM_I = 0x6C;
+/// <summary>This is  from the WHO_AM_I register. Its value is fixed at 6Ch.</summary>
+static const uint8_t LSM6DSO_WHO_AM_I = 0x6C;
 
 /// <summary>
 /// <para>This is a subordinate device Address. Its value is fixed at 6Ah.</para>
-/// <para>SDO is tied to ground so the least significant bit of the address is zero.</para>
+/// <para>SA0 is tied to ground so the least significant bit of the address is zero.</para>
 /// </summary>
-static const uint32_t LSM6DS3_ADDRESS = 0x6A;
+static const uint32_t LSM6DSO_ADDRESS = 0x6A;
 
 /// <summary>
 /// <para>The application must call this function to implement a software reset.</para>
-/// <para>This is a necessary function which will typically be used to reset the LSM6DS3 device.</para>
+/// <para>This is a necessary function which will typically be used to reset the LSM6DSO device.</para>
 /// </summary>
 /// <param name="driver">Selects the I2C driver to perform the transfer on.</param>
 /// <returns>Returns true on success and false on failure.</returns>
-bool LSM6DS3_Reset(I2CMaster* driver);
+bool LSM6DSO_Reset(I2CMaster* driver);
 
 /// <summary>
 /// <para>The application must call this function to validate the device id.</para>
@@ -146,7 +189,7 @@ bool LSM6DS3_Reset(I2CMaster* driver);
 /// </summary>
 /// <param name="driver">Selects the I2C driver to perform the transfer on.</param>
 /// <returns>Returns true on success and false on failure.</returns>
-bool LSM6DS3_CheckWhoAmI(I2CMaster* driver);
+bool LSM6DSO_CheckWhoAmI(I2CMaster* driver);
 
 /// <summary>
 /// <para>The application must call this function to configure the linear acceleration sensor control register.</para>
@@ -155,9 +198,9 @@ bool LSM6DS3_CheckWhoAmI(I2CMaster* driver);
 /// <param name="driver">Selects the I2C driver to perform the transfer on.</param>
 /// <param name="odr">Selects the output data rate and power mode.</param>
 /// <param name="fs">Selects the full-scale of the accelerometer.</param>
-/// <param name="bw">Selects the bandwidth of the anti-aliasing filter.</param>
+/// <param name="lpf2_xl_en">Selects the LPF2 filter.</param>
 /// <returns>Returns true on success and false on failure.</returns>
-bool LSM6DS3_ConfigXL(I2CMaster* driver, unsigned odr, unsigned fs, unsigned bw);
+bool LSM6DSO_ConfigXL(I2CMaster* driver, unsigned odr, unsigned fs, bool lpf2_xl_en);
 
 /// <summary>
 /// <para>The application must call this function to configure the gyroscope sensor control register.</para>
@@ -167,7 +210,7 @@ bool LSM6DS3_ConfigXL(I2CMaster* driver, unsigned odr, unsigned fs, unsigned bw)
 /// <param name="odr">Selects the output data rate and power mode.</param>
 /// <param name="fs">Selects the full-scale of the gyroscope.</param>
 /// <returns>Returns true on success and false on failure.</returns>
-bool LSM6DS3_ConfigG(I2CMaster* driver, unsigned odr, unsigned fs);
+bool LSM6DSO_ConfigG(I2CMaster* driver, unsigned odr, unsigned fs);
 
 /// <summary>
 /// <para>The application must call this function to check if new data are available in the temperature, gyroscore and accelerometer sensors.</para>
@@ -177,7 +220,7 @@ bool LSM6DS3_ConfigG(I2CMaster* driver, unsigned odr, unsigned fs);
 /// <param name="gda">Reads gyroscope for new data. false: no new data is available; true: a set of new data is available.</param>
 /// <param name="xlda">Reads accelerometer for new data. false: no new data is available; true: a set of new data is available.</param>
 /// <returns>Returns true on success and false on failure.</returns>
-bool LSM6DS3_Status(I2CMaster* driver, bool* tda, bool* gda, bool* xlda);
+bool LSM6DSO_Status(I2CMaster* driver, bool* tda, bool* gda, bool* xlda);
 
 /// <summary>
 /// <para>The application must call this function to read the temperature sensor.</para>
@@ -185,17 +228,17 @@ bool LSM6DS3_Status(I2CMaster* driver, bool* tda, bool* gda, bool* xlda);
 /// <param name="driver">Selects the I2C driver to perform the transfer on.</param>
 /// <param name="temp">Reads temperature sensor data.</param>
 /// <returns>Returns true on success and false on failure.</returns>
-bool LSM6DS3_ReadTemp(I2CMaster* driver, int16_t* temp);
+bool LSM6DSO_ReadTemp(I2CMaster* driver, int16_t* temp);
 
 /// <summary>
 /// <para>The application must call this function to read the temperature sensor.</para>
-/// <para>This function is a wrapper around <see cref="LSM6DS3_ReadTemp"/> which provides
+/// <para>This function is a wrapper around <see cref="LSM6DSO_ReadTemp"/> which provides
 /// human readable output.</para>
 /// </summary>
 /// <param name="driver">Selects the I2C driver to perform the transfer on.</param>
-/// <param name="temp">Reads temperature sensor data in thousandths of a degree Celcius.</param>
+/// <param name="temp">Reads temperature sensor data in Celsius degrees.</param>
 /// <returns>Returns true on success and false on failure.</returns>
-bool LSM6DS3_ReadTempHuman(I2CMaster* driver, int16_t* temp);
+bool LSM6DSO_ReadTempCelsius(I2CMaster* driver, float_t* temp);
 
 /// <summary>
 /// <para>The application must call this function to read the gyroscope.</para>
@@ -205,11 +248,11 @@ bool LSM6DS3_ReadTempHuman(I2CMaster* driver, int16_t* temp);
 /// <param name="y">Reads angular rate for Y axis.</param>
 /// <param name="z">Reads angular rate for Z axis.</param>
 /// <returns>Returns true on success and false on failure.</returns>
-bool LSM6DS3_ReadG(I2CMaster* driver, int16_t* x, int16_t* y, int16_t* z);
+bool LSM6DSO_ReadG(I2CMaster* driver, int16_t* x, int16_t* y, int16_t* z);
 
 /// <summary>
 /// <para>The application must call this function to read the gyroscope.</para>
-/// <para>This function is a wrapper around <see cref="LSM6DS3_ReadG"/> which provides
+/// <para>This function is a wrapper around <see cref="LSM6DSO_ReadG"/> which provides
 /// human readable output.</para>
 /// </summary>
 /// <param name="driver">Selects the I2C driver to perform the transfer on.</param>
@@ -217,7 +260,7 @@ bool LSM6DS3_ReadG(I2CMaster* driver, int16_t* x, int16_t* y, int16_t* z);
 /// <param name="y">Reads angular rate for Y axis in mdps.</param>
 /// <param name="z">Reads angular rate for Z axis in mdps.</param>
 /// <returns>Returns true on success and false on failure.</returns>
-bool LSM6DS3_ReadGHuman(I2CMaster* driver, int16_t* x, int16_t* y, int16_t* z);
+bool LSM6DSO_ReadGHuman(I2CMaster* driver, float_t* x, float_t* y, float_t* z);
 
 /// <summary>
 /// <para>The application must call this function to read the accelerometer.</para>
@@ -227,18 +270,28 @@ bool LSM6DS3_ReadGHuman(I2CMaster* driver, int16_t* x, int16_t* y, int16_t* z);
 /// <param name="y">Reads linear acceleration for Y axis.</param>
 /// <param name="z">Reads linear acceleration for Z axis.</param>
 /// <returns>Returns true on success and false on failure.</returns>
-bool LSM6DS3_ReadXL(I2CMaster* driver, int16_t* x, int16_t* y, int16_t* z);
+bool LSM6DSO_ReadXL(I2CMaster* driver, int16_t* x, int16_t* y, int16_t* z);
 
 /// <summary>
 /// <para>The application must call this function to read the accelerometer.</para>
-/// <para>This function is a wrapper around <see cref="LSM6DS3_ReadXL"/> which provides
+/// <para>This function is a wrapper around <see cref="LSM6DSO_ReadXL"/> which provides
 /// human readable output.</para>
 /// </summary>
 /// <param name="driver">Selects the I2C driver to perform the transfer on.</param>
-/// <param name="x">Reads linear acceleration for x axis in mm per second squared.</param>
-/// <param name="y">Reads linear acceleration for Y axis in mm per second squared.</param>
-/// <param name="z">Reads linear acceleration for Z axis in mm per second squared.</param>
+/// <param name="x">Reads linear acceleration for x axis in thousands of g.</param>
+/// <param name="y">Reads linear acceleration for Y axis in thousands of g.</param>
+/// <param name="z">Reads linear acceleration for Z axis in thousands of g.</param>
 /// <returns>Returns true on success and false on failure.</returns>
-bool LSM6DS3_ReadXLHuman(I2CMaster* driver, int16_t* x, int16_t* y, int16_t* z);
+bool LSM6DSO_ReadXLHuman(I2CMaster* driver, float_t* x, float_t* y, float_t* z);
 
-#endif // #ifndef LSM6DS3_H_
+/// <summary>Function for disabling MIPI I3CSM communication protocol.</summary>
+/// <param name="driver">Selects the I2C driver to perform the transfer on.</param>
+/// <returns>Returns true on success and false on failure.</returns>
+bool LSM6DSO_DisableI3C(I2CMaster* driver);
+
+/// <summary>Function for initialization of Sensor Hub feature.</summary>
+/// <param name="driver">Selects the I2C driver to perform the transfer on.</param>
+/// <returns>Returns true on success and false on failure.</returns>
+bool LSM6DSO_InitSensorHub(I2CMaster* driver);
+
+#endif // #ifndef LSM6DSO_H_

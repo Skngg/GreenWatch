@@ -8,7 +8,6 @@
 
 // Variable names and comments come from the LPS22HH datasheet, which can be found here:
 // https://www.st.com/resource/en/datasheet/lps22hh.pdf
-// Style inspired By Codethink LSM6DS3 driver
 
 /// <summary>This enum contains a set of registers that are used to control the behaviour of the LPS22HH device.</summary>
 typedef enum {
@@ -123,7 +122,7 @@ static const uint8_t LPS22HH_WHO_AM_I = 0xB3;
 /// <para>This is a subordinate device Address. Its value is fixed at 5Ch.</para>
 /// <para>SDO is tied to ground so the least significant bit of the address is zero.</para>
 /// </summary>
-static const uint8_t LPS22HH_ADDRESS = 0xB9;
+static const uint8_t LPS22HH_ADDRESS = 0x5C;
 
 /// <summary>
 /// <para>The application must call this function to implement a software reset.</para>
@@ -179,7 +178,7 @@ bool LPS22HH_ReadTemp(I2CMaster* driver, int16_t* temp);
 /// human readable output in Celsius.</para>
 /// </summary>
 /// <param name="driver">Selects the I2C driver to perform the transfer on.</param>
-/// <param name="temp">Reads temperature sensor data in Celcius.</param>
+/// <param name="temp">Reads temperature sensor data in Celsius degrees.</param>
 /// <returns>Returns true on success and false on failure.</returns>
 bool LPS22HH_ReadTempCelsius(I2CMaster* driver, float_t* temp);
 
@@ -200,5 +199,13 @@ bool LPS22HH_ReadPressure(I2CMaster* driver, int32_t* pressure);
 /// <param name="pressure">Reads pressure sensor data in hPa.</param>
 /// <returns>Returns true on success and false on failure.</returns>
 bool LPS22HH_ReadPressureHuman(I2CMaster* driver, float_t* pressure);
+
+/// <summary>
+/// <para>The application must call this function to initialize LPS22HH via its gateway.</para>
+/// </summary>
+/// <param name="driver">Selects the I2C driver to communicate with the host.</param>
+/// <returns>Returns true on success and false on failure.</returns>
+bool LPS22HH_OpenViaHost(I2CMaster* driver);
+
 
 #endif // #ifndef LPS22HH_H_

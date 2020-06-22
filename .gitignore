@@ -2,7 +2,7 @@
 .vs/
 
 # Ignore output directories
-/out/
-/out-*/
-/install/
-/install-*/
+/GreenWatch/out/
+/GreenWatch/out-*/
+/GreenWatch/install/
+/GreenWatch/install-*/

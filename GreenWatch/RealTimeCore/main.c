@@ -11,7 +11,7 @@
 #include "lib/Print.h"
 #include "lib/I2CMaster.h"
 
-#include "resources/LSM6DS3.h"
+#include "resources/LSM6DSO.h"
 #include "resources/LPS22HH.h"
 #include "resources/ui_msg.h"
 
@@ -42,7 +42,7 @@ static void displaySensors_LSM()
 	static bool initialised = false;
 	uint32_t retryRemain = STARTUP_RETRY_COUNT;
 	while (retryRemain > 0) {
-		if (!LSM6DS3_Status(driver, &hasTemp, &hasG, &hasXL)) {
+		if (!LSM6DSO_Status(driver, &hasTemp, &hasG, &hasXL)) {
 			UART_Print(uart_m4_debug, "ERROR: Failed to read accelerometer status register.\r\n");
 		}
 		if (hasTemp && hasG && hasXL) {
@@ -57,38 +57,38 @@ static void displaySensors_LSM()
 	}
 
 	if (initialised) {
-		int16_t x, y, z;
+		float_t x, y, z;
 		if (!hasXL) {
 			UART_Print(uart_m4_debug, "INFO: No accelerometer data.\r\n");
 		}
-		else if (!LSM6DS3_ReadXLHuman(driver, &x, &y, &z)) {
+		else if (!LSM6DSO_ReadXLHuman(driver, &x, &y, &z)) {
 			UART_Print(uart_m4_debug, "ERROR: Failed to read accelerometer data register.\r\n");
 		}
 		else {
 			UART_Printf(uart_m4_debug, "INFO: Acceleration: %.3f, %.3f, %.3f\r\n",
-				((float)x) / 1000, ((float)y) / 1000, ((float)z) / 1000);
+				x, y, z);
 		}
 
 		if (!hasG) {
 			UART_Print(uart_m4_debug, "INFO: No gyroscope data.\r\n");
 		}
-		else if (!LSM6DS3_ReadGHuman(driver, &x, &y, &z)) {
+		else if (!LSM6DSO_ReadGHuman(driver, &x, &y, &z)) {
 			UART_Print(uart_m4_debug, "ERROR: Failed to read gyroscope data register.\r\n");
 		}
 		else {
 			UART_Printf(uart_m4_debug, "INFO: Gyroscope: %.3f, %.3f, %.3f\r\n",
-				((float)x) / 1000, ((float)y) / 1000, ((float)z) / 1000);
+				x, y, z);
 		}
 
-		int16_t t;
+		float_t t;
 		if (!hasTemp) {
 			UART_Print(uart_m4_debug, "INFO: No temperature data.\r\n");
 		}
-		else if (!LSM6DS3_ReadTempHuman(driver, &t)) {
+		else if (!LSM6DSO_ReadTempCelsius(driver, &t)) {
 			UART_Print(uart_m4_debug, "ERROR: Failed to read temperature data register.\r\n");
 		}
 		else {
-			UART_Printf(uart_m4_debug, "INFO: Temperature: %.3f\r\n", ((float)t) / 1000);
+			UART_Printf(uart_m4_debug, "INFO: Temperature: %.3f\r\n", t);
 		}
 		UART_Print(uart_m4_debug, "\r\n");
 	}
@@ -207,27 +207,27 @@ _Noreturn void RTCoreMain(void)
 	}
 	I2CMaster_SetBusSpeed(driver, I2C_BUS_SPEED_STANDARD);
 
-	// Verify connection for temp and pressure sensors and setup devices
-	if (!LSM6DS3_CheckWhoAmI(driver)) {
+	// Verify connection for IMU, temp and pressure sensors and setup devices
+	if (!LSM6DSO_CheckWhoAmI(driver)) {
 		UART_Print(uart_m4_debug,
-			"ERROR: CheckWhoAmI Failed for LSM6DS3.\r\n");
+			"ERROR: CheckWhoAmI Failed for LSM6DSO.\r\n");
 	}
 	else {
 
 	}
-	if (!LSM6DS3_Reset(driver)) {
+	if (!LSM6DSO_Reset(driver)) {
 		UART_Print(uart_m4_debug,
-			"ERROR: Reset Failed for LSM6DS3.\r\n");
+			"ERROR: Reset Failed for LSM6DSO.\r\n");
 	}
 
-	if (!LSM6DS3_ConfigXL(driver, 1, 4, 400)) {
+	if (!LSM6DSO_ConfigXL(driver, 1, 4, false)) {
 		UART_Print(uart_m4_debug,
-			"ERROR: Failed to configure LSM6DS3 accelerometer.\r\n");
+			"ERROR: Failed to configure LSM6DSO accelerometer.\r\n");
 	}
 
-	if (!LSM6DS3_ConfigG(driver, 1, 500)) {
+	if (!LSM6DSO_ConfigG(driver, 1, 500)) {
 		UART_Print(uart_m4_debug,
-			"ERROR: Failed to configure LSM6DS3 accelerometer.\r\n");
+			"ERROR: Failed to configure LSM6DSO accelerometer.\r\n");
 	}
 	//******************************************************************************************
 	// LPS22HH connected through IMU's I3C - new library required
