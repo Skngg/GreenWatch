@@ -11,108 +11,111 @@
 
 /// <summary>This enum contains a set of registers that are used to control the behaviour of the LPS22HH device.</summary>
 typedef enum {
-    LPS22HH_REG_INTERRUPT_CFG = 0x0B,
-    LPS22HH_REG_THS_P_L = 0x0C,
-    LPS22HH_REG_THS_P_H = 0x0D,
-    LPS22HH_REG_IF_CTRL = 0x0E,
-    LPS22HH_REG_WHO_AM_I = 0x0F,
-    LPS22HH_REG_CTRL_REG1 = 0x10,
-    LPS22HH_REG_CTRL_REG2 = 0x11,
-    LPS22HH_REG_CTRL_REG3 = 0x12,
-    LPS22HH_REG_FIFO_CTRL = 0x13,
-    LPS22HH_REG_FIFO_WTM = 0x14,
-    LPS22HH_REG_REF_P_L = 0x15,
-    LPS22HH_REG_REF_P_H = 0x16,
-    LPS22HH_REG_PRDS_L = 0x18,
-    LPS22HH_REG_PRDS_H = 0x19,
-    LPS22HH_REG_INT_SOURCE = 0x24,
-    LPS22HH_REG_FIFO_STATUS1 = 0x25,
-    LPS22HH_REG_FIFO_STATUS2 = 0x26,
-    LPS22HH_REG_STATUS = 0x27,
-    LPS22HH_REG_PRESS_OUT_XL = 0x28,
-    LPS22HH_REG_PRESS_OUT_L = 0x29,
-    LPS22HH_REG_PRESS_OUT_H = 0x2A,
-    LPS22HH_REG_TEMP_OUT_L = 0x2B,
-    LPS22HH_REG_TEMP_OUT_H = 0x2C,
-    LPS22HH_REG_FIFO_DATA_OUT_PRESS_XL = 0x78,
-    LPS22HH_REG_FIFO_DATA_OUT_PRESS_L = 0x79,
-    LPS22HH_REG_FIFO_DATA_OUT_PRESS_H = 0x7A,
-    LPS22HH_REG_FIFO_DATA_OUT_TEMP_L = 0x7B,
-    LPS22HH_REG_FIFO_DATA_OUT_TEMP_H = 0x7C
+	LPS22HH_REG_INTERRUPT_CFG = 0x0B,
+	LPS22HH_REG_THS_P_L = 0x0C,
+	LPS22HH_REG_THS_P_H = 0x0D,
+	LPS22HH_REG_IF_CTRL = 0x0E,
+	LPS22HH_REG_WHO_AM_I = 0x0F,
+	LPS22HH_REG_CTRL_REG1 = 0x10,
+	LPS22HH_REG_CTRL_REG2 = 0x11,
+	LPS22HH_REG_CTRL_REG3 = 0x12,
+	LPS22HH_REG_FIFO_CTRL = 0x13,
+	LPS22HH_REG_FIFO_WTM = 0x14,
+	LPS22HH_REG_REF_P_L = 0x15,
+	LPS22HH_REG_REF_P_H = 0x16,
+	LPS22HH_REG_PRDS_L = 0x18,
+	LPS22HH_REG_PRDS_H = 0x19,
+	LPS22HH_REG_INT_SOURCE = 0x24,
+	LPS22HH_REG_FIFO_STATUS1 = 0x25,
+	LPS22HH_REG_FIFO_STATUS2 = 0x26,
+	LPS22HH_REG_STATUS = 0x27,
+	LPS22HH_REG_PRESS_OUT_XL = 0x28,
+	LPS22HH_REG_PRESS_OUT_L = 0x29,
+	LPS22HH_REG_PRESS_OUT_H = 0x2A,
+	LPS22HH_REG_TEMP_OUT_L = 0x2B,
+	LPS22HH_REG_TEMP_OUT_H = 0x2C,
+	LPS22HH_REG_FIFO_DATA_OUT_PRESS_XL = 0x78,
+	LPS22HH_REG_FIFO_DATA_OUT_PRESS_L = 0x79,
+	LPS22HH_REG_FIFO_DATA_OUT_PRESS_H = 0x7A,
+	LPS22HH_REG_FIFO_DATA_OUT_TEMP_L = 0x7B,
+	LPS22HH_REG_FIFO_DATA_OUT_TEMP_H = 0x7C
 } LPS22HH_reg_e;
 
 /// <summary>Bit field description for register STATUS.</summary>
 typedef union __attribute__((__packed__)) {
-    struct __attribute__((__packed__)) {
-        /// <summary>
-        /// <para>Pressure new data available.</para>
-        /// <para>false: no set of data available at barometer output</para>
-        /// <para>true: a new set of data is available at barometer output.</para>
-        /// </summary>
-        bool     p_da : 1;
-        /// <summary>
-        /// <para>Temperature new data available.</para>
-        /// <para>false: no set of data available at temperature sensor output</para>
-        /// <para>true: a new set of data is available at temperature sensor output.</para>
-        /// </summary>
-        bool     t_da : 1;
-        
-        unsigned res_3_2 : 2;
+	struct __attribute__((__packed__)) {
+		/// <summary>
+		/// <para>Pressure new data available.</para>
+		/// <para>false: no set of data available at barometer output</para>
+		/// <para>true: a new set of data is available at barometer output.</para>
+		/// </summary>
+		bool     p_da : 1;
+		/// <summary>
+		/// <para>Temperature new data available.</para>
+		/// <para>false: no set of data available at temperature sensor output</para>
+		/// <para>true: a new set of data is available at temperature sensor output.</para>
+		/// </summary>
+		bool     t_da : 1;
 
-        /// <summary>
-        /// <para>Pressure data overrun.</para>
-        /// <para>false: no overrun has occured</para>
-        /// <para>true: a new set of data has overwriten the previous data at barometer output.</para>
-        /// </summary>
-        bool     p_or : 1;
-        
-        /// <summary>
-        /// <para>Temperature data overrun.</para>
-        /// <para>false: no overrun has occured</para>
-        /// <para>true: a new set of data has overwriten the previous data at temperature sensor output.</para>
-        /// </summary>
-        bool     t_or : 1;
-        
-        unsigned res_7_6 : 2;
-    };
+		unsigned res_3_2 : 2;
 
-    uint8_t mask;
+		/// <summary>
+		/// <para>Pressure data overrun.</para>
+		/// <para>false: no overrun has occured</para>
+		/// <para>true: a new set of data has overwriten the previous data at barometer output.</para>
+		/// </summary>
+		bool     p_or : 1;
+
+		/// <summary>
+		/// <para>Temperature data overrun.</para>
+		/// <para>false: no overrun has occured</para>
+		/// <para>true: a new set of data has overwriten the previous data at temperature sensor output.</para>
+		/// </summary>
+		bool     t_or : 1;
+
+		unsigned res_7_6 : 2;
+	};
+
+	uint8_t mask;
 } LPS22HH_status_t;
 
 /// <summary>Bit field description for register CTRL_REG1.</summary>
 typedef union __attribute__((__packed__)) {
-    struct __attribute__((__packed__)) {
-        /// <summary>
-        /// <para>SPI Serial Interface Mode selection. Default value: false.</para>
-        /// <para>false: 4-wire interface</para>
-        /// <para>true: 3-wire interface.</para>
-        /// </summary>
-        bool sim : 1;
-        /// <summary>
-        /// <para>Block data update. Default value: false.</para>
-        /// <para>false: Continous update </para>
-        /// <para>true: Output registers not updated untill MSB and LSB have been read.</para>
-        /// </summary>
-        bool bdu : 1;
-        /// <summary>
-        /// <para>Low-pass configuration register. Default value: false.</para>
-        /// </summary>
-        bool lpfp_cfg : 1;
-        /// <summary>
-        /// <para>Enable low-pass filter on pressure data when Continuous mode is used. Default value: false.</para>
-        /// <para>false: Low-pass filter disabled</para>
-        /// <para>true: Low-pass filter enabled.</para>
-        /// </summary>
-        bool en_lpfp : 1;
+	struct __attribute__((__packed__)) {
+		/// <summary>
+		/// <para>SPI Serial Interface Mode selection. Default value: false.</para>
+		/// <para>false: 4-wire interface</para>
+		/// <para>true: 3-wire interface.</para>
+		/// </summary>
+		bool sim : 1;
 
-        /// <summary>Output data rate selection. Default value: 000.</summary>
-        /// <para>(000: one-shot; 001: 1 Hz; 010: 10 Hz; 011: 25 Hz; 100: 50 Hz; 101: 75 Hz; 110: 100 Hz; 111: 200 Hz).</para>
-        unsigned odr : 3;
+		/// <summary>
+		/// <para>Block data update. Default value: false.</para>
+		/// <para>false: Continous update </para>
+		/// <para>true: Output registers not updated untill MSB and LSB have been read.</para>
+		/// </summary>
+		bool bdu : 1;
 
-        unsigned null_7 : 1;
-    };
+		/// <summary>
+		/// <para>Low-pass configuration register. Default value: false.</para>
+		/// </summary>
+		bool lpfp_cfg : 1;
 
-    uint8_t mask;
+		/// <summary>
+		/// <para>Enable low-pass filter on pressure data when Continuous mode is used. Default value: false.</para>
+		/// <para>false: Low-pass filter disabled</para>
+		/// <para>true: Low-pass filter enabled.</para>
+		/// </summary>
+		bool en_lpfp : 1;
+
+		/// <summary>Output data rate selection. Default value: 000.</summary>
+		/// <para>(000: one-shot; 001: 1 Hz; 010: 10 Hz; 011: 25 Hz; 100: 50 Hz; 101: 75 Hz; 110: 100 Hz; 111: 200 Hz).</para>
+		unsigned odr : 3;
+
+		unsigned res_7 : 1;
+	};
+
+	uint8_t mask;
 } LPS22HH_ctrl_reg1_t;
 
 /// <summary>This is  from the WHO_AM_I register. Its value is fixed at B3h.</summary>
@@ -206,6 +209,10 @@ bool LPS22HH_ReadPressureHuman(I2CMaster* driver, float_t* pressure);
 /// <param name="driver">Selects the I2C driver to communicate with the host.</param>
 /// <returns>Returns true on success and false on failure.</returns>
 bool LPS22HH_OpenViaHost(I2CMaster* driver);
+
+bool LPS22HH_SHub_RegRead(I2CMaster* driver, uint8_t addr, uint8_t* value);
+
+bool LPS22HH_SHub_RegWrite(I2CMaster* driver, uint8_t addr, uint8_t value);
 
 
 #endif // #ifndef LPS22HH_H_

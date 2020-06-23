@@ -2,8 +2,7 @@
   "environments": [
     {
       "environment": "AzureSphere",
-
-      "AzureSphereTargetApiSet": "4+Beta2001"
+      "AzureSphereTargetApiSet": "5+Beta2004"
     }
   ],
   "configurations": [
@@ -11,9 +10,7 @@
       "name": "ARM-Debug",
       "generator": "Ninja",
       "configurationType": "Debug",
-      "inheritEnvironments": [
-        "AzureSphere"
-      ],
+      "inheritEnvironments": [ "AzureSphere" ],
       "buildRoot": "${projectDir}\\..\\out-RTCore\\${name}-${env.AzureSphereTargetApiSet}",
       "installRoot": "${projectDir}\\..\\install-RTCore\\${name}-${env.AzureSphereTargetApiSet}",
       "cmakeCommandArgs": "--no-warn-unused-cli",
@@ -22,25 +19,27 @@
       "variables": [
         {
           "name": "CMAKE_TOOLCHAIN_FILE",
-          "value": "${env.AzureSphereDefaultSDKDir}CMakeFiles\\AzureSphereRTCoreToolchain.cmake"
+          "value": "${env.AzureSphereDefaultSDKDir}CMakeFiles\\AzureSphereRTCoreToolchain.cmake",
+          "type": "STRING"
         },
         {
           "name": "AZURE_SPHERE_TARGET_API_SET",
-          "value": "${env.AzureSphereTargetApiSet}"
+          "value": "${env.AzureSphereTargetApiSet}",
+          "type": "STRING"
         },
         {
           "name": "ARM_GNU_PATH",
-          "value": "${env.DefaultArmToolsetPath}"
+          "value": "${env.DefaultArmToolsetPath}",
+          "type": "STRING"
         }
-      ]
+      ],
+      "intelliSenseMode": "windows-clang-arm"
     },
     {
       "name": "ARM-Release",
       "generator": "Ninja",
       "configurationType": "Release",
-      "inheritEnvironments": [
-        "AzureSphere"
-      ],
+      "inheritEnvironments": [ "AzureSphere" ],
       "buildRoot": "${projectDir}\\..\\out-RTCore\\${name}-${env.AzureSphereTargetApiSet}",
       "installRoot": "${projectDir}\\..\\install-RTCore\\${name}-${env.AzureSphereTargetApiSet}",
       "cmakeCommandArgs": "--no-warn-unused-cli",
@@ -49,15 +48,18 @@
       "variables": [
         {
           "name": "CMAKE_TOOLCHAIN_FILE",
-          "value": "${env.AzureSphereDefaultSDKDir}CMakeFiles\\AzureSphereRTCoreToolchain.cmake"
+          "value": "${env.AzureSphereDefaultSDKDir}CMakeFiles\\AzureSphereRTCoreToolchain.cmake",
+          "type": "STRING"
         },
         {
           "name": "AZURE_SPHERE_TARGET_API_SET",
-          "value": "${env.AzureSphereTargetApiSet}"
+          "value": "${env.AzureSphereTargetApiSet}",
+          "type": "STRING"
         },
         {
           "name": "ARM_GNU_PATH",
-          "value": "${env.DefaultArmToolsetPath}"
+          "value": "${env.DefaultArmToolsetPath}",
+          "type": "STRING"
         }
       ]
     }

@@ -9,6 +9,9 @@ add_executable (${PROJECT_NAME}  main.c resources/LPS22HH.c resources/LSM6DSO.c 
 target_link_libraries (${PROJECT_NAME})
 set_target_properties (${PROJECT_NAME} PROPERTIES LINK_DEPENDS ${CMAKE_SOURCE_DIR}/linker.ld)
 
+azsphere_configure_tools(TOOLS_REVISION "20.04")
+azsphere_configure_api(TARGET_API_SET "5+Beta2004")
+
 # Add MakeImage post-build command
 include ("${AZURE_SPHERE_MAKE_IMAGE_FILE}")
 

@@ -20,7 +20,7 @@
 
 static GPT* startUpTimer = NULL;
 
-static UART* uart_m4_debug = NULL;
+UART* uart_m4_debug = NULL;
 static UART* uart_ui = NULL;
 
 static I2CMaster* driver = NULL;
@@ -65,7 +65,7 @@ static void displaySensors_LSM()
 			UART_Print(uart_m4_debug, "ERROR: Failed to read accelerometer data register.\r\n");
 		}
 		else {
-			UART_Printf(uart_m4_debug, "INFO: Acceleration: %.3f, %.3f, %.3f\r\n",
+			UART_Printf(uart_m4_debug, "INFO: Acceleration: [%.3f, %.3f, %.3f] * 10^-3 [g]\r\n",
 				x, y, z);
 		}
 
@@ -76,7 +76,7 @@ static void displaySensors_LSM()
 			UART_Print(uart_m4_debug, "ERROR: Failed to read gyroscope data register.\r\n");
 		}
 		else {
-			UART_Printf(uart_m4_debug, "INFO: Gyroscope: %.3f, %.3f, %.3f\r\n",
+			UART_Printf(uart_m4_debug, "INFO: Gyroscope: [%.3f, %.3f, %.3f] * 10^-3 [dps]\r\n",
 				x, y, z);
 		}
 
@@ -88,7 +88,7 @@ static void displaySensors_LSM()
 			UART_Print(uart_m4_debug, "ERROR: Failed to read temperature data register.\r\n");
 		}
 		else {
-			UART_Printf(uart_m4_debug, "INFO: Temperature: %.3f\r\n", t);
+			UART_Printf(uart_m4_debug, "INFO: Temperature: %.3f [*C]\r\n", t);
 		}
 		UART_Print(uart_m4_debug, "\r\n");
 	}
@@ -118,29 +118,26 @@ static void displaySensors_LPS()
 	}
 
 	if (initialised) {
-		int16_t temp;
-		int32_t pressure;
+		float_t temp, pressure;
 
 		if (!hasTemp) {
 			UART_Print(uart_m4_debug, "INFO: No temperature data.\r\n");
 		}
-		else if (!LPS22HH_ReadTemp(driver, &temp)) {
+		else if (!LPS22HH_ReadTempCelsius(driver, &temp)) {
 			UART_Print(uart_m4_debug, "ERROR: Failed to read temperature sensor data register.\r\n");
 		}
 		else {
-			UART_Printf(uart_m4_debug, "INFO: Temperature: %.3f *C\r\n",
-				((float)temp) / 100);
+			UART_Printf(uart_m4_debug, "INFO: Temperature: %.3f [*C]\r\n", temp);
 		}
 
 		if (!hasPressure) {
 			UART_Print(uart_m4_debug, "INFO: No barometric data.\r\n");
 		}
-		else if (!LPS22HH_ReadPressure(driver, &pressure)) {
+		else if (!LPS22HH_ReadPressureHuman(driver, &pressure)) {
 			UART_Print(uart_m4_debug, "ERROR: Failed to read pressure sensor data register.\r\n");
 		}
 		else {
-			UART_Printf(uart_m4_debug, "INFO: Pressure: %.3f hPa\r\n",
-				((float)pressure) / 4096);
+			UART_Printf(uart_m4_debug, "INFO: Pressure: %.3f [hPa]\r\n", pressure);
 		}
 
 		UART_Print(uart_m4_debug, "\r\n");
@@ -182,6 +179,14 @@ static void InvokeCallbacks(void)
 _Noreturn void RTCoreMain(void)
 {
 	//******************************************************************************************
+	//************************************DELAY FOR OPENOCD*************************************
+	volatile bool f = false;
+	while (!f) {
+		// empty.
+	}
+	//******************************************************************************************
+
+	//******************************************************************************************
 	//************************************BEGIN SYSTEM INIT*************************************
 
 	VectorTableInit();
@@ -199,6 +204,11 @@ _Noreturn void RTCoreMain(void)
 		UI_DisplayMenu(uart_ui);
 	}
 
+	// Open and init startup timer
+	if (!(startUpTimer = GPT_Open(MT3620_UNIT_GPT0, 1000, GPT_MODE_ONE_SHOT))) {
+		UART_Print(uart_m4_debug, "ERROR: Opening startup timer\r\n");
+	}
+
 	// Open and setup I2C comm
 	driver = I2CMaster_Open(MT3620_UNIT_ISU2);
 	if (!driver) {
@@ -212,12 +222,14 @@ _Noreturn void RTCoreMain(void)
 		UART_Print(uart_m4_debug,
 			"ERROR: CheckWhoAmI Failed for LSM6DSO.\r\n");
 	}
-	else {
 
-	}
 	if (!LSM6DSO_Reset(driver)) {
 		UART_Print(uart_m4_debug,
 			"ERROR: Reset Failed for LSM6DSO.\r\n");
+	}
+	if (!LPS22HH_OpenViaHost(driver)) {
+		UART_Print(uart_m4_debug,
+			"ERROR: SHub Init Failed for LPS22HH.\r\n");
 	}
 
 	if (!LSM6DSO_ConfigXL(driver, 1, 4, false)) {
@@ -229,19 +241,14 @@ _Noreturn void RTCoreMain(void)
 		UART_Print(uart_m4_debug,
 			"ERROR: Failed to configure LSM6DSO accelerometer.\r\n");
 	}
-	//******************************************************************************************
-	// LPS22HH connected through IMU's I3C - new library required
-	//******************************************************************************************
-	/*if (!LPS22HH_CheckWhoAmI(driver)) {
+
+	displaySensors_LSM();
+
+	if (!LPS22HH_CheckWhoAmI(driver)) {
 		UART_Print(uart_m4_debug,
 			"ERROR: CheckWhoAmI Failed for LPS22HH.\r\n");
-		uint8_t ident;
-		LPS22HH_RegRead(driver, LPS22HH_REG_WHO_AM_I, &ident);
-		UART_Printf(uart_m4_debug, "WHO_AM_I: %d\r\n", ident);
 	}
-	else {
 
-	}
 	if (!LPS22HH_Reset(driver)) {
 		UART_Print(uart_m4_debug,
 			"ERROR: Reset Failed for LPS22HH.\r\n");
@@ -250,15 +257,9 @@ _Noreturn void RTCoreMain(void)
 	if (!LPS22HH_Config(driver, 0x04, false, false, false, false)) {
 		UART_Print(uart_m4_debug,
 			"ERROR: Failed to configure LPS22HH.\r\n");
-	}*/
-	//******************************************************************************************
-
-	if (!(startUpTimer = GPT_Open(MT3620_UNIT_GPT0, 1000, GPT_MODE_ONE_SHOT))) {
-		UART_Print(uart_m4_debug, "ERROR: Opening startup timer\r\n");
 	}
 
-	// Self test
-	displaySensors_LSM();
+	displaySensors_LPS();
 
 
 	//*************************************END SYSTEM INIT**************************************
