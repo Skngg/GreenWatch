@@ -1,6 +1,7 @@
 ﻿#include <stddef.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <limits.h>
 
 #include "lib/CPUFreq.h"
 #include "lib/VectorTable.h"
@@ -10,6 +11,7 @@
 #include "lib/UART.h"
 #include "lib/Print.h"
 #include "lib/I2CMaster.h"
+#include "lib/ADC.h"
 
 #include "resources/LSM6DSO.h"
 #include "resources/LPS22HH.h"
@@ -19,11 +21,31 @@
 #define STARTUP_RETRY_PERIOD 500 // [ms]
 
 static GPT* startUpTimer = NULL;
+static GPT* samplingTimer = NULL;
 
 UART* uart_m4_debug = NULL;
 static UART* uart_ui = NULL;
 
 static I2CMaster* driver = NULL;
+
+#define ADC_DATA_SIZE 1
+#define ADC_MAX_VAL 0xFFF
+
+static __attribute__((section(".sysram"))) uint32_t rawData[ADC_DATA_SIZE];
+static ADC_Data data[ADC_DATA_SIZE];
+static int32_t adcStatus;
+
+static bool samplingTimeFlag = false;
+
+static void callbackADC(int32_t status)
+{
+	adcStatus = status;
+}
+
+static void callbackSamplingTimer(int32_t status)
+{
+	samplingTimeFlag = true;
+}
 
 typedef struct CallbackNode {
 	bool enqueued;
@@ -31,7 +53,37 @@ typedef struct CallbackNode {
 	void (*cb)(void);
 } CallbackNode;
 
-static void EnqueueCallback(CallbackNode* node);
+static CallbackNode* volatile callbacks = NULL;
+
+static void EnqueueCallback(CallbackNode* node)
+{
+	uint32_t prevBasePri = NVIC_BlockIRQs();
+	if (!node->enqueued) {
+		CallbackNode* prevHead = callbacks;
+		node->enqueued = true;
+		callbacks = node;
+		node->next = prevHead;
+	}
+	NVIC_RestoreIRQs(prevBasePri);
+}
+
+static void InvokeCallbacks(void)
+{
+	CallbackNode* node;
+	do {
+		uint32_t prevBasePri = NVIC_BlockIRQs();
+		node = callbacks;
+		if (node) {
+			node->enqueued = false;
+			callbacks = node->next;
+		}
+		NVIC_RestoreIRQs(prevBasePri);
+
+		if (node) {
+			(*node->cb)();
+		}
+	} while (node);
+}
 
 static void displaySensors_LSM()
 {
@@ -65,7 +117,7 @@ static void displaySensors_LSM()
 			UART_Print(uart_m4_debug, "ERROR: Failed to read accelerometer data register.\r\n");
 		}
 		else {
-			UART_Printf(uart_m4_debug, "INFO: Acceleration: [%.3f, %.3f, %.3f] * 10^-3 [g]\r\n",
+			UART_Printf(uart_m4_debug, "Acceleration: [%.3f, %.3f, %.3f] * 10^-3 [g]\r\n",
 				x, y, z);
 		}
 
@@ -76,7 +128,7 @@ static void displaySensors_LSM()
 			UART_Print(uart_m4_debug, "ERROR: Failed to read gyroscope data register.\r\n");
 		}
 		else {
-			UART_Printf(uart_m4_debug, "INFO: Gyroscope: [%.3f, %.3f, %.3f] * 10^-3 [dps]\r\n",
+			UART_Printf(uart_m4_debug, "Gyroscope:    [%.3f, %.3f, %.3f] * 10^-3 [dps]\r\n",
 				x, y, z);
 		}
 
@@ -88,7 +140,7 @@ static void displaySensors_LSM()
 			UART_Print(uart_m4_debug, "ERROR: Failed to read temperature data register.\r\n");
 		}
 		else {
-			UART_Printf(uart_m4_debug, "INFO: Temperature: %.3f [*C]\r\n", t);
+			UART_Printf(uart_m4_debug, "Temperature:   %.3f [*C]\r\n", t);
 		}
 		UART_Print(uart_m4_debug, "\r\n");
 	}
@@ -127,7 +179,7 @@ static void displaySensors_LPS()
 			UART_Print(uart_m4_debug, "ERROR: Failed to read temperature sensor data register.\r\n");
 		}
 		else {
-			UART_Printf(uart_m4_debug, "INFO: Temperature: %.3f [*C]\r\n", temp);
+			UART_Printf(uart_m4_debug, "Temperature:   %.3f [*C]\r\n", temp);
 		}
 
 		if (!hasPressure) {
@@ -137,53 +189,29 @@ static void displaySensors_LPS()
 			UART_Print(uart_m4_debug, "ERROR: Failed to read pressure sensor data register.\r\n");
 		}
 		else {
-			UART_Printf(uart_m4_debug, "INFO: Pressure: %.3f [hPa]\r\n", pressure);
+			UART_Printf(uart_m4_debug, "Pressure:      %.3f [hPa]\r\n", pressure);
 		}
 
 		UART_Print(uart_m4_debug, "\r\n");
 	}
 }
 
-static CallbackNode* volatile callbacks = NULL;
-
-static void EnqueueCallback(CallbackNode* node)
-{
-	uint32_t prevBasePri = NVIC_BlockIRQs();
-	if (!node->enqueued) {
-		CallbackNode* prevHead = callbacks;
-		node->enqueued = true;
-		callbacks = node;
-		node->next = prevHead;
-	}
-	NVIC_RestoreIRQs(prevBasePri);
-}
-
-static void InvokeCallbacks(void)
-{
-	CallbackNode* node;
-	do {
-		uint32_t prevBasePri = NVIC_BlockIRQs();
-		node = callbacks;
-		if (node) {
-			node->enqueued = false;
-			callbacks = node->next;
-		}
-		NVIC_RestoreIRQs(prevBasePri);
-
-		if (node) {
-			(*node->cb)();
-		}
-	} while (node);
+static void displaySensors_AmbientLight() {
+	float_t V = ((float_t)(data[0].value) * 2.5f) / ADC_MAX_VAL;
+	UART_Printf(uart_m4_debug, "Ambient light: %.3f [V]\r\n",V);
+	adcStatus = 0;
 }
 
 _Noreturn void RTCoreMain(void)
 {
 	//******************************************************************************************
 	//************************************DELAY FOR OPENOCD*************************************
+#ifdef DEBUG
 	volatile bool f = false;
 	while (!f) {
 		// empty.
 	}
+#endif // DEBUG
 	//******************************************************************************************
 
 	//******************************************************************************************
@@ -262,10 +290,38 @@ _Noreturn void RTCoreMain(void)
 	displaySensors_LPS();
 
 
+	//Initialise ADC driver, and then configure it to use channel 0
+	AdcContext* handle = ADC_Open(MT3620_UNIT_ADC0);
+
+	if (ADC_ReadPeriodicAsync(handle, &callbackADC, ADC_DATA_SIZE, data, rawData,
+		0x1, 1000, 2500) != ERROR_NONE) {
+		UART_Print(uart_m4_debug, "Error: Failed to initialise ADC.\r\n");
+	}
+
+
+	// Init sampling timer
+	if (!(samplingTimer = GPT_Open(MT3620_UNIT_GPT1, 1000, GPT_MODE_REPEAT))) {
+		UART_Print(uart_m4_debug, "ERROR: Opening sampling timer\r\n");
+	}
+
+	displaySensors_AmbientLight();
+
+	GPT_StartTimeout(samplingTimer, 1000, GPT_UNITS_MILLISEC, &callbackSamplingTimer);
+
+
+
 	//*************************************END SYSTEM INIT**************************************
 	//******************************************************************************************
 
 	for (;;) {
+		if (samplingTimeFlag) {
+
+			displaySensors_LSM();
+			displaySensors_LPS();
+			displaySensors_AmbientLight();
+			
+			samplingTimeFlag = false;
+		}
 		__asm__("wfi");
 		InvokeCallbacks();
 	}

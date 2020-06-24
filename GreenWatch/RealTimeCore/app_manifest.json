@@ -8,7 +8,8 @@
     "AllowedApplicationConnections": [ "67ef8d2b-3085-4a34-9f5c-61a34718a329" ],
     "Gpio": [ 12 ],
     "Uart": [ "ISU0" ],
-    "I2cMaster": [ "ISU2" ]
+    "I2cMaster": [ "ISU2" ],
+    "Adc": [ "ADC-CONTROLLER-0" ]
   },
   "ApplicationType": "RealTimeCapable"
 }
