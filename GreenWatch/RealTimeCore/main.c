@@ -1,7 +1,7 @@
 ﻿#include <stddef.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <limits.h>
+#include <stdlib.h>
 
 #include "lib/CPUFreq.h"
 #include "lib/VectorTable.h"
@@ -16,6 +16,7 @@
 #include "resources/LSM6DSO.h"
 #include "resources/LPS22HH.h"
 #include "resources/ui_msg.h"
+#include "resources/utilities.h"
 
 #define STARTUP_RETRY_COUNT  20
 #define STARTUP_RETRY_PERIOD 500 // [ms]
@@ -26,26 +27,23 @@ static GPT* samplingTimer = NULL;
 UART* uart_m4_debug = NULL;
 static UART* uart_ui = NULL;
 
-static I2CMaster* driver = NULL;
-
-#define ADC_DATA_SIZE 1
-#define ADC_MAX_VAL 0xFFF
+I2CMaster* driver = NULL;
 
 static __attribute__((section(".sysram"))) uint32_t rawData[ADC_DATA_SIZE];
-static ADC_Data data[ADC_DATA_SIZE];
+ADC_Data lightData[ADC_DATA_SIZE];
 static int32_t adcStatus;
 
+static currentMenu menu = { 0, 0, NULL, false };
+
 static bool samplingTimeFlag = false;
+uint8_t sampleInterval = 2;
 
-static void callbackADC(int32_t status)
-{
-	adcStatus = status;
-}
+ringBuffer_int16 temperatureLog;
+ringBuffer_uint32 pressureLog;
+ringBuffer_uint32 lightLog;
 
-static void callbackSamplingTimer(int32_t status)
-{
-	samplingTimeFlag = true;
-}
+static bool logResize = false;
+uint8_t logSize = 5;
 
 typedef struct CallbackNode {
 	bool enqueued;
@@ -65,6 +63,125 @@ static void EnqueueCallback(CallbackNode* node)
 		node->next = prevHead;
 	}
 	NVIC_RestoreIRQs(prevBasePri);
+}
+
+static void callbackADC(int32_t status)
+{
+	adcStatus = status;
+}
+
+static void callbackSamplingTimer(int32_t status)
+{
+	samplingTimeFlag = true;
+}
+
+static void HandleUartIsu0RxIrqDeferred(void)
+{
+	uintptr_t avail = UART_ReadAvailable(uart_ui);
+	if (avail == 0) {
+		UART_Print(uart_m4_debug, "ERROR: UART received interrupt for zero bytes.\r\n");
+		return;
+	}
+
+	if (avail >= 65536) {
+		// Avoid handling large amounts of data as this could cause stack issues.
+		UART_Print(uart_m4_debug, "ERROR: UART received too many bytes.\r\n");
+		return;
+	}
+
+	uint8_t buffer[avail];
+	if (UART_Read(uart_ui, buffer, avail) != ERROR_NONE) {
+		UART_Print(uart_m4_debug, "ERROR: Failed to read ");
+		UART_PrintUInt(uart_m4_debug, avail);
+		UART_Print(uart_m4_debug, " bytes from UART.\r\n");
+		return;
+	}
+
+
+
+	// YOU ARE IN ONE OF MAIN CATEGORIES \/
+	if (menu.mainMenu != 0) {
+		// YOU ARE IN THE SETTINGS \/
+		if (menu.mainMenu == 8) {
+			if (menu.subMenu == 0) {
+				switch (buffer[0])
+				{
+				case 0x31:
+
+					menu.subMenu = 1;
+					break;
+				case 0x32:
+					menu.subMenu = 2;
+					break;
+				case 0x58:							// X
+				case 0x78:							// x
+					menu.subMenu = 0;
+					menu.mainMenu = 0;
+					break;
+				default:
+					break;
+				}
+			}
+			else {
+				uint8_t numBuffer = atoi((char*)buffer);
+				if (menu.subMenu == 1) {
+					// Change logging interval
+					sampleInterval = numBuffer > 0 ? numBuffer : sampleInterval;
+				}
+				if (menu.subMenu == 2) {
+					// Change log size
+					logSize = (numBuffer <= MAX_BUFFER_SIZE && numBuffer > 0) ? numBuffer : logSize;
+					logResize = true;
+				}
+				menu.subMenu = 0;
+			}
+		}
+		// YOU ARE IN DISPLAY CATEGORY \/
+		else {
+			if (buffer[0] == 0x58 || buffer[0] == 0x78) {
+				menu.subMenu = 0;
+				menu.mainMenu = 0;
+			}
+		};
+	}
+	// YOU ARE IN THE MAIN SCREEN \/
+	else {
+		switch (buffer[0])
+		{
+		case 0x31:
+			menu.mainMenu = 1;
+			break;
+		case 0x32:
+			menu.mainMenu = 2;
+			break;
+		case 0x33:
+			menu.mainMenu = 3;
+			break;
+		case 0x34:
+			menu.mainMenu = 4;
+			break;
+		case 0x35:
+			menu.mainMenu = 5;
+			break;
+		case 0x36:
+			menu.mainMenu = 6;
+			break;
+		case 0x37:
+			menu.mainMenu = 7;
+			break;
+		case 0x38:
+			menu.mainMenu = 8;
+			break;
+		default:
+			break;
+		}
+	}
+	updateMenuCallback(&menu);
+}
+
+static void HandleUartIsu0RxIrq(void) {
+	static CallbackNode cbn = { .enqueued = false, .cb = HandleUartIsu0RxIrqDeferred };
+	EnqueueCallback(&cbn);
 }
 
 static void InvokeCallbacks(void)
@@ -197,8 +314,8 @@ static void displaySensors_LPS()
 }
 
 static void displaySensors_AmbientLight() {
-	float_t V = ((float_t)(data[0].value) * 2.5f) / ADC_MAX_VAL;
-	UART_Printf(uart_m4_debug, "Ambient light: %.3f [V]\r\n",V);
+	float_t V = ((float_t)(lightData[0].value) * 2.5f) / ADC_MAX_VAL;
+	UART_Printf(uart_m4_debug, "Ambient light: %.3f [V]\r\n", V);
 	adcStatus = 0;
 }
 
@@ -227,7 +344,7 @@ _Noreturn void RTCoreMain(void)
 	}
 
 	// Open UI UART and display menu
-	uart_ui = UART_Open(MT3620_UNIT_ISU0, 115200, UART_PARITY_NONE, 1, NULL);
+	uart_ui = UART_Open(MT3620_UNIT_ISU0, 115200, UART_PARITY_NONE, 1, HandleUartIsu0RxIrq);
 	if (uart_ui != NULL) {
 		UI_DisplayMenu(uart_ui);
 	}
@@ -293,7 +410,7 @@ _Noreturn void RTCoreMain(void)
 	//Initialise ADC driver, and then configure it to use channel 0
 	AdcContext* handle = ADC_Open(MT3620_UNIT_ADC0);
 
-	if (ADC_ReadPeriodicAsync(handle, &callbackADC, ADC_DATA_SIZE, data, rawData,
+	if (ADC_ReadPeriodicAsync(handle, &callbackADC, ADC_DATA_SIZE, lightData, rawData,
 		0x1, 1000, 2500) != ERROR_NONE) {
 		UART_Print(uart_m4_debug, "Error: Failed to initialise ADC.\r\n");
 	}
@@ -308,19 +425,54 @@ _Noreturn void RTCoreMain(void)
 
 	GPT_StartTimeout(samplingTimer, 1000, GPT_UNITS_MILLISEC, &callbackSamplingTimer);
 
+	uint8_t sampleCounter = 0;
 
+	ringBuffer_int16_Init(&temperatureLog, logSize);
+	ringBuffer_uint32_Init(&pressureLog, logSize);
+	ringBuffer_uint32_Init(&lightLog, logSize);
 
 	//*************************************END SYSTEM INIT**************************************
 	//******************************************************************************************
 
 	for (;;) {
+		if (logResize == true) {
+			ringBuffer_int16_Resize(&temperatureLog, logSize);
+			ringBuffer_int16_Resize(&pressureLog, logSize);
+			ringBuffer_uint32_Resize(&lightLog, logSize);
+			logResize = false;
+		}
+
+		if (menu.refreshMenu == true) {
+			updateMenuCallback(&menu);
+
+			menu.Callback(uart_ui);
+			menu.refreshMenu = false;
+		}
+
 		if (samplingTimeFlag) {
 
+			if (sampleCounter >= sampleInterval) {
+				int16_t tempCurrent = 0;
+				uint32_t pressCurrent = 0;
+				
+				LPS22HH_ReadTemp(driver, &tempCurrent);
+				ringBuffer_int16_Write(&temperatureLog, tempCurrent);
+				
+				LPS22HH_ReadPressure(driver, &pressCurrent);
+				ringBuffer_uint32_Write(&pressureLog, pressCurrent);
+
+				ringBuffer_uint32_Write(&temperatureLog, lightData[0].value);
+
+				sampleCounter = 0;
+			}
+
+			// PRINT TO DEBUG UART
 			displaySensors_LSM();
 			displaySensors_LPS();
 			displaySensors_AmbientLight();
-			
+
 			samplingTimeFlag = false;
+			++sampleCounter;
 		}
 		__asm__("wfi");
 		InvokeCallbacks();
