@@ -4,6 +4,6 @@ Prototype of an IoT sensor kit for greenhouses or similar gardening facilities. 
 Features of the system will include:
 
 * Data acquisition from temperature, pressure and ambient light sensors
-* Diagnostics and configuration via UART - i.a. temperature and pressure data unit
-* System may include additional features developed in future - e.g. cloud-data storage and data analysis usig MS Azure platfrom
+* Diagnostics and configuration via UART - i.a. constant readings trasmit to debug UART, log size and data logging frequency
+* System may include additional features developed in future - e.g. cloud-data storage and data analysis using MS Azure platfrom
 
